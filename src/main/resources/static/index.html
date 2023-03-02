@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>債権管理システム</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+
+<body>
+
+    <div id="app" class="container">
+        <h1>債権管理システム</h1>
+
+        <!-- 整形表示 -->
+        <table class="table">
+            <tr>
+                <td>銘柄コード</td>
+                <td>銘柄名</td>
+                <td>償還年月日</td>
+                <td>利率</td>
+                <td>クーポン回数</td>
+                <td>保有数量</td>
+                <td>簿価</td>
+                <td>時価</td>
+                <td>評価損益</td>
+            </tr>
+            <tr v-for="datum in aggregatedData">
+                <td>{{ datum.code }}</td>
+                <td>{{ datum.name }}</td>
+                <td>{{ datum.maturity }}</td>
+                <td class="right">{{ datum.rate }}</td>
+                <td class="right">{{ datum.couponTimes }}</td>
+                <td class="right">{{ datum.quantity }}</td>
+                <td class="right">{{ datum.bookValue }}</td>
+                <td class="right">{{ datum.marketValue }}</td>
+                <td class="right">{{ datum.profitAndLoss }}</td>
+            </tr>
+        </table>
+
+        <!-- modal test -->
+        <!-- 切り替えボタンの設定 -->
+        <button type="button" class="btn btn-primary btn-{themecolor}.rounded-circle.p-0" data-bs-toggle="modal"
+            data-bs-target="#addPosition">
+            在庫を追加
+        </button>
+
+        <!-- モーダルの設定 -->
+        <div class="modal fade" id="addPosition" tabindex="-1" aria-labelledby="exampleModalLabel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">在庫を追加する</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <!-- ここからモーダルの内容 -->
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">銘柄コード</span>
+                            </div>
+                            <select v-model="newPosition.code" class="form-control">
+                                <option disabled value="">銘柄コードを入力</option>
+
+                                <option v-for="issue in issues" class="dropdown-item">
+                                    {{ issue.code }}
+                                </option>
+                            </select>
+                            <!-- <input type="text" v-model="newPosition.code" class="form-control" placeholder="銘柄コードを入力"> -->
+                        </div>
+                        <p v-if="isInvalidCode" class="error" style="color: red">入力されたコードの銘柄は存在しません</p>
+                        <p v-else class="error"></p>
+
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">数量</span>
+                            </div>
+                            <input type="text" v-model="newPosition.quantity" class="form-control"
+                                placeholder="追加する数量を入力(売却なら負の値を入力)">
+                        </div>
+                        <p v-if="isInvalidNumberForQuantity" class="error" style="color: red">正しい数値を入力してください</p>
+                        <p v-else-if="isInvalidQuantity" class="error" style="color: red">{{ newPosition.minimumQuantity
+                            }} 以上の数値を入力してください</p>
+                        <p v-else class="error"></p>
+
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">簿価</span>
+                            </div>
+                            <input type="text" v-model="newPosition.bookValue" class="form-control"
+                                placeholder="追加する価格を入力">
+                        </div>
+                        <p v-if="isInvalidNumberForBookValue" class="error" style="color: red">正の数値を入力してください</p>
+                        <p v-else class="error"></p>
+
+                        <p v-if="result.flag == true" class="error" style="color: blue">{{ result.message }}</p>
+                        <p v-else-if="result.flag == false">{{ result.message }}</p>
+
+                        <!-- ここまでモーダルの内容 -->
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                        <button type="button" class="btn btn-primary" v-on:click="addPosition">在庫を追加する</button>
+                    </div><!-- /.modal-footer -->
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+
+
+
+
+        <!-- modal test -->
+        <!-- 切り替えボタンの設定 -->
+        <button type="button" class="btn btn-primary btn-{themecolor}.rounded-circle.p-0" data-bs-toggle="modal"
+            data-bs-target="#mtm">
+            値洗い
+        </button>
+
+        <!-- モーダルの設定 -->
+        <div class="modal fade" id="mtm" tabindex="-1" aria-labelledby="exampleModalLabel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">値洗いを実行する</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <!-- ここからモーダルの内容 -->
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">銘柄コード</span>
+                            </div>
+
+                            <select v-model="mtmData.code" class="form-control">
+                                <option disabled value="">銘柄コードを入力</option>
+
+                                <option v-for="issue in issues" class="dropdown-item">
+                                    {{ issue.code }}
+                                </option>
+                            </select>
+                        </div>
+                        <p v-if="isInvalidCodeForMtM" class="error" style="color: red">入力されたコードの銘柄は存在しません</p>
+                        <p v-else class="error"></p>
+
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">時価</span>
+                            </div>
+                            <input type="text" v-model="mtmData.marketValue" class="form-control" placeholder="時価を入力">
+                        </div>
+                        <p v-if="isInvalidNumberForMarketValue" class="error" style="color: red">正の数値を入力してください</p>
+                        <p v-else class="error"></p>
+
+                        <p v-if="resultOfMtm.flag == true" class="error" style="color: blue">{{ resultOfMtm.message }}
+                        </p>
+                        <p v-else-if="resultOfMtm.flag == false">{{ resultOfMtm.message }}</p>
+
+                        <!-- ここまでモーダルの内容 -->
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                        <button type="button" class="btn btn-primary" v-on:click="mtm">値洗いを実行する</button>
+                    </div><!-- /.modal-footer -->
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+
+        <!-- 保有銘柄一覧を表示する部分
+        <div id="showAllPositions">
+            <h2>保有銘柄</h2>
+            <table class="table">
+                <tr>
+                    <td>銘柄コード</td>
+                    <td>簿価</td>
+                    <td>数量</td>
+                </tr>
+                <tr v-for="position in positions">
+                    <td>{{ position.code }}</td>
+                    <td class="right">{{ position.bookValue }}</td>
+                    <td class="right">{{ position.quantity }}</td>
+                </tr>
+            </table>
+        </div> -->
+
+        <!-- 銘柄マスターを表示する部分 -->
+        <!-- <div id="showAllIssues">
+            <h2>銘柄マスター</h2>
+            <button v-on:click="mtm">値洗いを実行する</button>
+            <table class="table">
+                <tr>
+                    <td>銘柄コード</td>
+                    <td>銘柄名</td>
+                    <td>利率</td>
+                    <td>償還年月日</td>
+                    <td>クーポン回数</td>
+                    <td>時価</td>
+                </tr>
+                <tr v-for="issue in issues">
+                    <td>{{ issue.code }}</td>
+                    <td>{{ issue.name }}</td>
+                    <td>{{ issue.rate }}</td>
+                    <td>{{ issue.maturity }}</td>
+                    <td>{{ issue.couponTimes}}</td>
+                    <td>
+                        <input type="text" v-bind:value="issue.marketValue" class="right" placeholder="#N/A">
+                    </td>
+
+                </tr>
+            </table>
+        </div> -->
+
+
+
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="script.js"></script>
+
+    <!-- Bootatrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"
+        integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js"
+        integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF"
+        crossorigin="anonymous"></script>
+</body>
+
+
+</html>
